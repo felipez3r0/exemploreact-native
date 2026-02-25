@@ -1,0 +1,17 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    // strict: true ativa ALL as verificações de tipo restritas do TypeScript.
+    // Altamente recomendado em projetos sérios para pegar erros cedo.
+    "strict": true,
+    // Permite importar arquivos CSS (necessário para o global.css do NativeWind)
+    "allowSyntheticDefaultImports": true
+  },
+  // Inclui todos os arquivos TypeScript do projeto e as declarações do NativeWind
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    ".expo/types/**/*.d.ts",
+    "expo-env.d.ts"
+  ]
+}

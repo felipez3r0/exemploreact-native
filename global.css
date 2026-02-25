@@ -1,0 +1,20 @@
+/*
+ * global.css — Arquivo CSS global do NativeWind
+ *
+ * Este arquivo importa as três camadas do Tailwind CSS:
+ *
+ * @tailwind base      → Estilos de normalização/reset (como "box-sizing: border-box")
+ * @tailwind components → Componentes pré-construídos do Tailwind (raramente usados em RN)
+ * @tailwind utilities  → TODAS as classes utilitárias (flex, bg-*, text-*, p-*, m-* etc.)
+ *
+ * Este arquivo é importado UMA ÚNICA VEZ no arquivo app/_layout.tsx (o layout raiz).
+ * O NativeWind processa este CSS durante o build e converte tudo para
+ * StyleSheets compatíveis com React Native.
+ *
+ * OBS: No React Native não existe um "navegador" com CSS real.
+ * O NativeWind faz a "mágica" de traduzir classes CSS para objetos de estilo JS.
+ */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
