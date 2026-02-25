@@ -12,7 +12,7 @@ Um aplicativo completo de **Lista de Tarefas** construído com React Native e Ex
 Ao estudar e reproduzir este projeto, você terá contato com:
 
 - ⚛️ **React Native** e seus componentes principais (`View`, `Text`, `FlatList`, `TextInput`, etc.)
-- 📱 **Expo SDK 54** e o ecossistema Expo
+- 📱 **Expo SDK 55** e o ecossistema Expo
 - 🗂️ **Expo Router** — roteamento baseado em arquivos (como Next.js para mobile)
 - 🗄️ **expo-sqlite** — banco de dados local com SQL no dispositivo
 - 🎨 **NativeWind** — Tailwind CSS no React Native
@@ -136,12 +136,12 @@ cd meu-lista-tarefas
 
 ### ETAPA 2 — Instalar as dependências
 
-Instale os pacotes do Expo com versões compatíveis com o SDK 54:
+Instale os pacotes do Expo com versões compatíveis com o SDK 55:
 
 ```bash
 npx expo install expo-router expo-sqlite expo-linking expo-constants expo-status-bar \
   react-native-screens react-native-safe-area-context \
-  react-native-gesture-handler react-native-reanimated
+  react-native-gesture-handler react-native-reanimated react-native-worklets
 ```
 
 Instale o NativeWind e TailwindCSS:
@@ -161,6 +161,7 @@ npm install nativewind@^4.1 tailwindcss@^3.4 --legacy-peer-deps
 > - `react-native-safe-area-context` → áreas seguras (evita notch)
 > - `react-native-gesture-handler` → gestos (swipe, tap)
 > - `react-native-reanimated` → animações performáticas
+> - `react-native-worklets` → motor de threads para o Reanimated 4.x (peer dependency obrigatória)
 > - `nativewind` → Tailwind CSS para React Native
 > - `tailwindcss` → framework de estilos utilitários
 
@@ -739,7 +740,33 @@ const tarefa = await db.getFirstAsync<Task>(
 
 ---
 
-## 🚧 Desafios para Praticar
+## � Solução de Problemas
+
+### `Cannot find module 'react-native-worklets/plugin'`
+
+```
+Error: [BABEL]: Cannot find module 'react-native-worklets/plugin'
+Require stack:
+- .../node_modules/react-native-reanimated/plugin/index.js
+```
+
+**Causa:** A partir da versão 4.x, o `react-native-reanimated` separou o motor de _worklets_ (código que roda em threads nativas) em um pacote independente chamado `react-native-worklets`. Esse pacote é uma **peer dependency obrigatória**, mas não é instalado automaticamente.
+
+**Solução:**
+
+```bash
+npx expo install react-native-worklets
+```
+
+Em seguida, reinicie o servidor limpando o cache:
+
+```bash
+npx expo start --clear
+```
+
+---
+
+## �🚧 Desafios para Praticar
 
 Depois de reproduzir o projeto, tente implementar estas melhorias:
 
