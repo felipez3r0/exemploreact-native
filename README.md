@@ -144,6 +144,12 @@ npx expo install expo-router expo-sqlite expo-linking expo-constants expo-status
   react-native-gesture-handler react-native-reanimated react-native-worklets
 ```
 
+Instale o `react-dom` — necessário para o `@expo/log-box` funcionar corretamente no bundler:
+
+```bash
+npx expo install react-dom
+```
+
 Instale o NativeWind e TailwindCSS:
 
 ```bash
@@ -162,6 +168,7 @@ npm install nativewind@^4.1 tailwindcss@^3.4 --legacy-peer-deps
 > - `react-native-gesture-handler` → gestos (swipe, tap)
 > - `react-native-reanimated` → animações performáticas
 > - `react-native-worklets` → motor de threads para o Reanimated 4.x (peer dependency obrigatória)
+> - `react-dom` → necessário para o sistema de log overlay do Expo (`@expo/log-box`) resolver `react-dom/client` no bundler Metro
 > - `nativewind` → Tailwind CSS para React Native
 > - `tailwindcss` → framework de estilos utilitários
 
