@@ -980,7 +980,7 @@ export default function HomeScreen() {
         options={{
           headerRight: () => (
             <TouchableOpacity onPress={() => router.push('/profile')}>
-              <Text className="text-3xl mr-4">👤</Text>
+              <Text className="text-3xl">👤</Text>
             </TouchableOpacity>
           ),
         }}
@@ -1161,16 +1161,25 @@ const cameraRef = useRef<CameraView>(null);
 
 ### expo-file-system — Manipulação de Arquivos Permanentes
 
-O `expo-file-system` fornece APIs para ler, escrever, copiar e deletar arquivos no sistema de arquivos do dispositivo.
+O `expo-file-system` fornece APIs orientadas a objetos para ler, escrever, copiar e deletar arquivos no sistema de arquivos do dispositivo.
 
-**Diretórios principais:**
+> **Expo SDK 55 — Nova API (`File` e `Paths`)**  
+> A partir do SDK 55 o `expo-file-system` expõe uma API baseada em classes. Importe `File` e `Paths` em vez do namespace legado `FileSystem.*`.
+
+**Import:**
 
 ```typescript
-FileSystem.documentDirectory; // Permanente: sobrevive até desinstalar o app
+import { File, Paths } from 'expo-file-system';
+```
+
+**Diretórios principais via `Paths`:**
+
+```typescript
+Paths.document; // Permanente: sobrevive até desinstalar o app
 // iOS: /var/mobile/.../Documents/
 // Android: /data/user/0/.../files/
 
-FileSystem.cacheDirectory; // Temporário: pode ser limpo pelo sistema
+Paths.cache; // Temporário: pode ser limpo pelo sistema
 // iOS: /var/mobile/.../Library/Caches/
 // Android: /data/user/0/.../cache/
 ```
@@ -1180,37 +1189,37 @@ FileSystem.cacheDirectory; // Temporário: pode ser limpo pelo sistema
 ```typescript
 const tempUri = 'file:///cache/Camera/photo-123.jpg'; // URI temporário
 const fileName = `profile-${Date.now()}.jpg`;
-const permanentUri = FileSystem.documentDirectory + fileName;
 
-await FileSystem.copyAsync({
-  from: tempUri,
-  to: permanentUri,
-});
+// Cria uma referência ao arquivo de destino (permanente)
+const destFile = new File(Paths.document, fileName);
 
-// Agora salve `permanentUri` no SQLite — ele sobrevive ao fechar o app!
+// Copia do cache temporário para o diretório permanente
+new File(tempUri).copy(destFile);
+
+// Agora salve `destFile.uri` no SQLite — ele sobrevive ao fechar o app!
 ```
 
 **Por que copiar em vez de usar direto o URI temporário?**
 
 - ❌ URIs da câmera são voláteis (sistema pode deletar a qualquer momento)
-- ✅ `documentDirectory` garante persistência até o app ser desinstalado
+- ✅ `Paths.document` garante persistência até o app ser desinstalado
 - ✅ Permite controle total sobre quando deletar arquivos antigos
 
 **Outras operações úteis:**
 
 ```typescript
 // Ler arquivo como string
-const content = await FileSystem.readAsStringAsync(uri);
+const file = new File(Paths.document, 'dados.txt');
+const content = await file.text();
 
 // Escrever arquivo
-await FileSystem.writeAsStringAsync(uri, 'conteúdo', { encoding: 'utf8' });
+await file.write('conteúdo');
+
+// Verificar se existe
+console.log(file.exists); // boolean
 
 // Deletar arquivo
-await FileSystem.deleteAsync(uri);
-
-// Obter informações do arquivo
-const info = await FileSystem.getInfoAsync(uri);
-console.log(info.exists, info.size); // boolean, number (bytes)
+file.delete();
 ```
 
 ---

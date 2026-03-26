@@ -112,7 +112,6 @@ export default function HomeScreen() {
           headerRight: () => (
             <TouchableOpacity
               onPress={() => router.push('/profile')}
-              className="mr-4"
               accessibilityLabel="Abrir perfil"
               accessibilityRole="button"
             >
