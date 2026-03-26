@@ -156,6 +156,12 @@ Instale o NativeWind e TailwindCSS:
 npm install nativewind@^4.1 tailwindcss@^3.4 --legacy-peer-deps
 ```
 
+Instale o `babel-preset-expo` como dependência de desenvolvimento:
+
+```bash
+npm install --save-dev babel-preset-expo
+```
+
 > **Por que usamos `npx expo install` em vez de `npm install`?**  
 > O `expo install` seleciona automaticamente as versões dos pacotes compatíveis com o SDK do seu projeto. Instalar a versão errada pode causar erros difíceis de diagnosticar!
 
@@ -171,6 +177,7 @@ npm install nativewind@^4.1 tailwindcss@^3.4 --legacy-peer-deps
 > - `react-dom` → necessário para o sistema de log overlay do Expo (`@expo/log-box`) resolver `react-dom/client` no bundler Metro
 > - `nativewind` → Tailwind CSS para React Native
 > - `tailwindcss` → framework de estilos utilitários
+> - `babel-preset-expo` → preset do Babel configurado para projetos Expo (transpilação de código)
 
 ---
 
