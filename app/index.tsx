@@ -35,7 +35,7 @@ import {
   Text,
   ActivityIndicator,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, Stack } from 'expo-router';
 
 import { useTasks } from '../src/hooks/useTasks';
 import { TaskItem } from '../src/components/TaskItem';
@@ -92,72 +92,103 @@ export default function HomeScreen() {
   // ─────────────────────────────────────────────────────────────────────────
 
   return (
-    // `relative` é necessário para posicionar o FAB com `absolute` dentro
-    <View className="flex-1 bg-gray-50 relative">
-      {/* ── BARRA DE FILTROS ──────────────────────────────────────── */}
-      <FilterBar
-        activeFilter={filter}
-        allCount={allTasksCount}
-        pendingCount={pendingCount}
-        completedCount={completedCount}
-        onFilterChange={setFilter}
+    <>
+      {/*
+       * Stack.Screen inline: permite customizar opções do header desta tela
+       * DINAMICAMENTE, com acesso ao router e outros hooks do componente.
+       *
+       * Por que inline e não no _layout.tsx?
+       * ─────────────────────────────────────
+       * No `_layout.tsx` só temos OPÇÕES ESTÁTICAS. Aqui precisamos do
+       * `router` para navegar ao pressionar o botão — por isso definimos
+       * o `headerRight` inline, acessando o router da tela.
+       *
+       * O `headerRight` recebe uma função que retorna o JSX a ser renderizado
+       * no canto direito do header. Usamos um botão com ícone de usuário
+       * que navega para a rota `/profile`.
+       */}
+      <Stack.Screen
+        options={{
+          headerRight: () => (
+            <TouchableOpacity
+              onPress={() => router.push('/profile')}
+              className="mr-4"
+              accessibilityLabel="Abrir perfil"
+              accessibilityRole="button"
+            >
+              <Text className="text-3xl">👤</Text>
+            </TouchableOpacity>
+          ),
+        }}
       />
 
-      {/* ── LISTA DE TAREFAS ──────────────────────────────────────── */}
-      {/*
-       * FlatList é o componente de lista mais performático do React Native.
-       *
-       * Props principais:
-       * - `data`: array de itens para renderizar
-       * - `keyExtractor`: função que retorna uma key única para cada item
-       *   (como o `key` do map() no React web). Usamos o `id` da tarefa.
-       * - `renderItem`: função que recebe cada item e retorna o JSX
-       * - `ListEmptyComponent`: renderizado quando `data` está vazio
-       * - `contentContainerStyle`: estilo do container interno da lista
-       * - `showsVerticalScrollIndicator`: oculta a barra de scroll vertical
-       */}
-      <FlatList
-        data={tasks}
-        keyExtractor={(item) => String(item.id)}
-        renderItem={({ item }) => (
-          <TaskItem task={item} onToggle={toggleTask} onDelete={removeTask} />
-        )}
-        ListEmptyComponent={<EmptyState filter={filter} />}
-        // Quando vazia: flex:1 para o EmptyState ocupar a tela toda
-        // Quando com itens: padding para não ficar colado nas bordas
-        contentContainerStyle={
-          tasks.length === 0
-            ? { flexGrow: 1 }
-            : { paddingVertical: 8, paddingBottom: 100 }
-        }
-        showsVerticalScrollIndicator={false}
-      />
+      {/* `relative` é necessário para posicionar o FAB com `absolute` dentro */}
+      <View className="flex-1 bg-gray-50 relative">
+        {/* ── BARRA DE FILTROS ──────────────────────────────────────── */}
+        <FilterBar
+          activeFilter={filter}
+          allCount={allTasksCount}
+          pendingCount={pendingCount}
+          completedCount={completedCount}
+          onFilterChange={setFilter}
+        />
 
-      {/* ── FAB — BOTÃO FLUTUANTE DE ADICIONAR ───────────────────── */}
-      {/*
-       * `absolute bottom-8 right-6`: posição fixa no canto inferior direito.
-       * `absolute` em React Native funciona igual ao CSS: posiciona o elemento
-       * fora do fluxo normal, relativo ao pai com `relative` (ou à tela).
-       *
-       * `shadow-lg`: adiciona sombra para dar sensação de "flutuante".
-       *
-       * Ao pressionar, navega para a rota `/form` SEM parâmetro de ID,
-       * o que indica à tela de formulário que é uma NOVA tarefa.
-       */}
-      <TouchableOpacity
-        onPress={() => router.push('/form')}
-        className="absolute bottom-8 right-6 w-16 h-16 bg-indigo-600 rounded-full items-center justify-center shadow-lg"
-        accessibilityLabel="Adicionar nova tarefa"
-        accessibilityRole="button"
-      >
-        {/* O "+" como símbolo visual — usando `text-3xl` para tamanho grande */}
-        <Text
-          className="text-white text-4xl font-light"
-          style={{ lineHeight: 46 }}
+        {/* ── LISTA DE TAREFAS ──────────────────────────────────────── */}
+        {/*
+         * FlatList é o componente de lista mais performático do React Native.
+         *
+         * Props principais:
+         * - `data`: array de itens para renderizar
+         * - `keyExtractor`: função que retorna uma key única para cada item
+         *   (como o `key` do map() no React web). Usamos o `id` da tarefa.
+         * - `renderItem`: função que recebe cada item e retorna o JSX
+         * - `ListEmptyComponent`: renderizado quando `data` está vazio
+         * - `contentContainerStyle`: estilo do container interno da lista
+         * - `showsVerticalScrollIndicator`: oculta a barra de scroll vertical
+         */}
+        <FlatList
+          data={tasks}
+          keyExtractor={(item) => String(item.id)}
+          renderItem={({ item }) => (
+            <TaskItem task={item} onToggle={toggleTask} onDelete={removeTask} />
+          )}
+          ListEmptyComponent={<EmptyState filter={filter} />}
+          // Quando vazia: flex:1 para o EmptyState ocupar a tela toda
+          // Quando com itens: padding para não ficar colado nas bordas
+          contentContainerStyle={
+            tasks.length === 0
+              ? { flexGrow: 1 }
+              : { paddingVertical: 8, paddingBottom: 100 }
+          }
+          showsVerticalScrollIndicator={false}
+        />
+
+        {/* ── FAB — BOTÃO FLUTUANTE DE ADICIONAR ───────────────────── */}
+        {/*
+         * `absolute bottom-8 right-6`: posição fixa no canto inferior direito.
+         * `absolute` em React Native funciona igual ao CSS: posiciona o elemento
+         * fora do fluxo normal, relativo ao pai com `relative` (ou à tela).
+         *
+         * `shadow-lg`: adiciona sombra para dar sensação de "flutuante".
+         *
+         * Ao pressionar, navega para a rota `/form` SEM parâmetro de ID,
+         * o que indica à tela de formulário que é uma NOVA tarefa.
+         */}
+        <TouchableOpacity
+          onPress={() => router.push('/form')}
+          className="absolute bottom-8 right-6 w-16 h-16 bg-indigo-600 rounded-full items-center justify-center shadow-lg"
+          accessibilityLabel="Adicionar nova tarefa"
+          accessibilityRole="button"
         >
-          +
-        </Text>
-      </TouchableOpacity>
-    </View>
+          {/* O "+" como símbolo visual — usando `text-3xl` para tamanho grande */}
+          <Text
+            className="text-white text-4xl font-light"
+            style={{ lineHeight: 46 }}
+          >
+            +
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </>
   );
 }

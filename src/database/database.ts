@@ -134,5 +134,29 @@ async function runMigrations(db: SQLite.SQLiteDatabase): Promise<void> {
       completed   INTEGER NOT NULL DEFAULT 0,
       createdAt   TEXT    NOT NULL
     );
+
+    -- Cria a tabela de perfil do usuário se ainda não existir.
+    -- Esta tabela armazena um único registro (id fixo = 1) com os dados do usuário.
+    --
+    -- Estrutura da tabela 'profile':
+    -- ┌──────────────┬──────────────────────────────────────────────┐
+    -- │ Coluna       │ Descrição                                    │
+    -- ├──────────────┼──────────────────────────────────────────────┤
+    -- │ id           │ Chave primária (sempre 1 — registro único)   │
+    -- │ name         │ Nome do usuário (padrão: string vazia)       │
+    -- │ email        │ Email do usuário (padrão: string vazia)      │
+    -- │ photoUri     │ Caminho da foto de perfil (pode ser NULL)    │
+    -- └──────────────┴──────────────────────────────────────────────┘
+    --
+    -- Por que id NÃO usa AUTOINCREMENT?
+    -- Como só existe um perfil por app, sempre fazemos INSERT com id=1.
+    -- O AUTOINCREMENT é útil para múltiplos registros (como tasks), mas aqui
+    -- seria desnecessário e adicionaria sobrecarga ao banco.
+    CREATE TABLE IF NOT EXISTS profile (
+      id       INTEGER PRIMARY KEY,
+      name     TEXT    NOT NULL DEFAULT '',
+      email    TEXT    NOT NULL DEFAULT '',
+      photoUri TEXT
+    );
   `);
 }

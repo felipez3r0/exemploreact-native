@@ -11,7 +11,9 @@
   "dependencies": {
     "babel-preset-expo": "^55.0.0",
     "expo": "~55.0.0",
+    "expo-camera": "~55.0.11",
     "expo-constants": "~55.0.7",
+    "expo-file-system": "~55.0.11",
     "expo-linking": "~55.0.7",
     "expo-router": "~55.0.1",
     "expo-sqlite": "~55.0.10",

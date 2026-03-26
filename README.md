@@ -19,6 +19,9 @@ Ao estudar e reproduzir este projeto, você terá contato com:
 - 🔷 **TypeScript** — tipagem estática para segurança e produtividade
 - 🪝 **Custom Hooks** — separação de lógica com `useTasks`
 - 🏗️ **Boas práticas** — Repository Pattern, Separation of Concerns, DRY
+- 📷 **expo-camera** — captura de fotos com a câmera do dispositivo
+- 📁 **expo-file-system** — persistência de arquivos no armazenamento local
+- 🔐 **Permissões de hardware** — como solicitar e tratar permissões em tempo de execução
 
 ---
 
@@ -32,6 +35,7 @@ Ao estudar e reproduzir este projeto, você terá contato com:
 | 🗑️ Excluir tarefa     | Com confirmação de segurança                         |
 | 🔍 Filtrar tarefas    | Por: Todas / Pendentes / Concluídas                  |
 | 💾 Persistência local | Dados salvos com SQLite — sobrevivem ao fechar o app |
+| 👤 Perfil do usuário  | Nome, email e foto capturada diretamente pela câmera |
 
 ---
 
@@ -79,20 +83,25 @@ exemploreact-native/
 ├── app/                          ← Telas do app (roteamento Expo Router)
 │   ├── _layout.tsx               ← Layout raiz + configuração do Stack
 │   ├── index.tsx                 ← Tela principal (lista de tarefas)
-│   └── form.tsx                  ← Formulário de adicionar/editar
+│   ├── form.tsx                  ← Formulário de adicionar/editar
+│   └── profile.tsx               ← Tela de perfil do usuário
 │
 ├── src/                          ← Código fonte da aplicação
 │   ├── types/
-│   │   └── task.ts               ← Interfaces e tipos TypeScript
+│   │   ├── task.ts               ← Interfaces e tipos TypeScript (tarefas)
+│   │   └── profile.ts            ← Interfaces e tipos TypeScript (perfil)
 │   ├── database/
 │   │   ├── database.ts           ← Conexão com o SQLite (Singleton)
-│   │   └── taskRepository.ts     ← Operações CRUD (Repository Pattern)
+│   │   ├── taskRepository.ts     ← Operações CRUD (Repository Pattern - tasks)
+│   │   └── profileRepository.ts  ← Operações CRUD (Repository Pattern - profile)
 │   ├── hooks/
-│   │   └── useTasks.ts           ← Hook customizado com lógica de negócio
+│   │   ├── useTasks.ts           ← Hook customizado com lógica de negócio (tasks)
+│   │   └── useProfile.ts         ← Hook customizado com lógica de negócio (profile)
 │   └── components/
 │       ├── TaskItem.tsx           ← Item individual da lista
 │       ├── FilterBar.tsx          ← Barra de filtros (Todas/Pendentes/Concluídas)
-│       └── EmptyState.tsx         ← Tela vazia com mensagem contextual
+│       ├── EmptyState.tsx         ← Tela vazia com mensagem contextual
+│       └── CameraCapture.tsx      ← Componente de captura de foto com câmera
 │
 ├── assets/                       ← Imagens, ícones, fontes
 ├── global.css                    ← Diretivas @tailwind (NativeWind)
@@ -649,40 +658,398 @@ Você verá um QR Code no terminal. Escaneie com o app **Expo Go** no seu celula
 
 ---
 
+### ETAPA 12 — Instalar expo-camera e expo-file-system
+
+Instale os pacotes necessários para captura de foto e manipulação de arquivos:
+
+```bash
+npx expo install expo-camera expo-file-system
+```
+
+> **O que são esses pacotes?**
+>
+> - `expo-camera` → acesso à câmera nativa do dispositivo (iOS e Android)
+> - `expo-file-system` → leitura, escrita e cópia de arquivos no sistema
+
+> **Compatibilidade com Expo Go:**  
+> Ambos funcionam no **Expo Go** durante o desenvolvimento (permissão solicitada em tempo de execução).  
+> Para builds de produção (standalone), nenhuma configuração adicional é necessária — o Expo configura automaticamente os plugins nativos!
+
+---
+
+### ETAPA 13 — Criar os Tipos do Perfil
+
+Dentro da pasta `src/types/`, crie o arquivo `profile.ts`:
+
+```typescript
+/**
+ * src/types/profile.ts — Definições de Tipos TypeScript para o módulo de Perfil
+ */
+
+// Interface que representa o perfil do usuário no banco de dados
+export interface UserProfile {
+  id: number; // Sempre 1 (registro único)
+  name: string;
+  email: string;
+  photoUri: string | null; // Caminho local da foto ou null se não houver
+}
+
+// Dados necessários para salvar o perfil (criar ou atualizar)
+export interface SaveProfileInput {
+  name: string;
+  email: string;
+  photoUri: string | null;
+}
+```
+
+> **Por que `photoUri` e não a imagem em Base64?**  
+> Armazenar apenas o caminho (URI) do arquivo é mais eficiente:
+>
+> - Economiza espaço no banco (SQLite)
+> - Evita carregar a imagem inteira na memória ao buscar o perfil
+> - O componente `<Image source={{ uri }}>` aceita URIs de arquivo diretamente
+
+> **Veja o arquivo completo com comentários educacionais em `src/types/profile.ts`!**
+
+---
+
+### ETAPA 14 — Expandir a Migração do Banco de Dados
+
+Abra `src/database/database.ts` e adicione a criação da tabela `profile` na função `runMigrations`, **logo após a tabela `tasks`**:
+
+```typescript
+async function runMigrations(db: SQLite.SQLiteDatabase): Promise<void> {
+  await db.execAsync(`
+    PRAGMA journal_mode = WAL;
+
+    CREATE TABLE IF NOT EXISTS tasks (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      title       TEXT    NOT NULL,
+      description TEXT,
+      completed   INTEGER NOT NULL DEFAULT 0,
+      createdAt   TEXT    NOT NULL
+    );
+
+    -- Tabela de perfil do usuário (registro único com id fixo = 1)
+    CREATE TABLE IF NOT EXISTS profile (
+      id       INTEGER PRIMARY KEY,
+      name     TEXT    NOT NULL DEFAULT '',
+      email    TEXT    NOT NULL DEFAULT '',
+      photoUri TEXT
+    );
+  `);
+}
+```
+
+> **Por que `id` NÃO usa `AUTOINCREMENT`?**  
+> Só existe UM perfil por app (id sempre = 1). O `AUTOINCREMENT` é útil para múltiplos registros (como tasks), mas aqui seria desnecessário e adicionaria sobrecarga.
+
+> **Migração aditiva:**  
+> `IF NOT EXISTS` garante que rodar a migração múltiplas vezes não quebra dados existentes. Se a tabela `tasks` já existe, ela não é recriada — só a `profile` é adicionada se não existir.
+
+---
+
+### ETAPA 15 — Criar o Repositório de Perfil
+
+Crie `src/database/profileRepository.ts`:
+
+```typescript
+import { getDatabase } from './database';
+import { UserProfile, SaveProfileInput } from '../types/profile';
+
+// Busca o perfil do usuário
+export async function getProfile(): Promise<UserProfile | null> {
+  const db = await getDatabase();
+  return db.getFirstAsync<UserProfile>(
+    'SELECT * FROM profile WHERE id = 1 LIMIT 1',
+  );
+}
+
+// Salva (cria ou atualiza) o perfil usando INSERT OR REPLACE (upsert)
+export async function saveProfile(input: SaveProfileInput): Promise<void> {
+  const db = await getDatabase();
+  await db.runAsync(
+    'INSERT OR REPLACE INTO profile (id, name, email, photoUri) VALUES (1, ?, ?, ?)',
+    input.name,
+    input.email,
+    input.photoUri,
+  );
+}
+```
+
+> **O que é "upsert"?**  
+> `INSERT OR REPLACE` = UPDATE + INSERT.  
+> Se o registro com `id=1` não existe → insere.  
+> Se já existe → substitui.  
+> Isso elimina a necessidade de checar `IF EXISTS` no código.
+
+> **Veja o arquivo completo com comentários extensivos em `src/database/profileRepository.ts`!**
+
+---
+
+### ETAPA 16 — Criar o Hook useProfile
+
+Crie `src/hooks/useProfile.ts` seguindo o mesmo padrão de `useTasks.ts`:
+
+```typescript
+import { useState, useCallback } from 'react';
+import { useFocusEffect } from 'expo-router';
+import * as ProfileRepository from '../database/profileRepository';
+import { UserProfile, SaveProfileInput } from '../types/profile';
+
+export function useProfile() {
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const loadProfile = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await ProfileRepository.getProfile();
+      setProfile(data);
+    } catch (error) {
+      console.error('Erro ao carregar perfil:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadProfile();
+    }, [loadProfile]),
+  );
+
+  const handleSave = useCallback(
+    async (input: SaveProfileInput) => {
+      await ProfileRepository.saveProfile(input);
+      await loadProfile();
+    },
+    [loadProfile],
+  );
+
+  return { profile, loading, saveProfile: handleSave };
+}
+```
+
+> **Comparação com `useTasks`:**  
+> Ambos seguem o mesmo padrão arquitetural:
+>
+> - `useState` para armazenar dados
+> - `useFocusEffect` para recarregar ao ganhar foco
+> - `useCallback` para estabilizar referências de funções
+> - Separação clara: hook = lógica, componente = UI
+
+> **Veja o arquivo completo com comentários detalhados em `src/hooks/useProfile.ts`!**
+
+---
+
+### ETAPA 17 — Criar o Componente de Câmera
+
+Crie `src/components/CameraCapture.tsx`:
+
+Este componente encapsula toda a lógica de:
+
+1. **Solicitação de permissões** (com hook `useCameraPermissions`)
+2. **Três estados de UI**:
+   - Verificando permissões
+   - Permissão negada (tela explicativa + botão para Configurações)
+   - Permissão concedida (preview da câmera)
+3. **Captura da foto** usando `CameraView` + `useRef` + `takePictureAsync`
+
+```typescript
+import { CameraView, useCameraPermissions } from 'expo-camera';
+import { useRef } from 'react';
+// ... (veja o arquivo completo no repositório)
+
+export function CameraCapture({ onCapture, onClose }) {
+  const [permission, requestPermission] = useCameraPermissions();
+  const cameraRef = useRef<CameraView>(null);
+
+  const handleCapture = async () => {
+    const photo = await cameraRef.current?.takePictureAsync({ quality: 0.7 });
+    if (photo?.uri) onCapture(photo.uri);
+  };
+
+  // Renderização condicional por estado de permissão...
+}
+```
+
+> **Fluxo de permissões:**
+>
+> 1. `permission === null` → Verificando...
+> 2. `permission.granted === false` → Exibe tela explicativa com botão "Conceder Permissão"
+> 3. `permission.granted === true` → Exibe o preview da câmera com botão de captura
+
+> **Por que `useRef<CameraView>`?**  
+> Para chamar métodos imperativos do componente `CameraView`, precisamos de uma referência direta. O `useRef` guarda um valor mutável que NÃO causa re-render quando muda.
+
+> **Veja o arquivo completo com comentários extremamente detalhados em `src/components/CameraCapture.tsx`!**
+
+---
+
+### ETAPA 18 — Criar a Tela de Perfil
+
+Crie `app/profile.tsx`:
+
+```typescript
+import React, { useState, useEffect } from 'react';
+import { TextInput, TouchableOpacity, Image, ScrollView } from 'react-native';
+import { File, Paths } from 'expo-file-system';
+import { useProfile } from '../src/hooks/useProfile';
+import { CameraCapture } from '../src/components/CameraCapture';
+
+export default function ProfileScreen() {
+  const { profile, loading, saveProfile } = useProfile();
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [showCamera, setShowCamera] = useState(false);
+
+  // Sincroniza estados locais quando o perfil carrega do banco
+  useEffect(() => {
+    if (profile) {
+      setName(profile.name);
+      setEmail(profile.email);
+      setPhotoUri(profile.photoUri);
+    }
+  }, [profile]);
+
+  // Copia a foto do URI temporário para o diretório permanente
+  const handlePhotoCapture = async (tempUri: string) => {
+    const fileName = `profile-${Date.now()}.jpg`;
+    const destFile = new File(Paths.document, fileName);
+    new File(tempUri).copy(destFile);
+    setPhotoUri(destFile.uri);
+    setShowCamera(false);
+  };
+
+  // Salva o perfil no banco
+  const handleSave = async () => {
+    await saveProfile({ name: name.trim(), email: email.trim(), photoUri });
+    router.back();
+  };
+
+  // Renderiza formulário + CameraCapture condicional...
+}
+```
+
+> **Por que copiar o arquivo?**  
+> O URI retornado pela câmera (`expo-camera`) é **temporário** — o arquivo fica no cache e pode ser deletado pelo sistema a qualquer momento.  
+> Usamos `new File(tempUri).copy(destFile)` (nova API do `expo-file-system`) para movê-lo para `Paths.document`, que é o armazenamento **permanente** do app.
+
+> **`contentContainerClassName` vs `className` no ScrollView:**  
+> `ScrollView` tem duas áreas de estilo:
+>
+> - `className`: aplica ao container que rola
+> - `contentContainerClassName`: aplica ao conteÚDO dentro  
+>   Use `contentContainerClassName` para padding/espaçamento interno!
+
+> **Veja o arquivo completo com comentários extensivos em `app/profile.tsx`!**
+
+---
+
+### ETAPA 19 — Integrar o Perfil na Navegação
+
+**19.1 — Registrar a rota no `_layout.tsx`:**
+
+Adicione a tela `profile` no `<Stack>`:
+
+```typescript
+<Stack.Screen
+  name="profile"
+  options={{
+    title: '👤 Meu Perfil',
+  }}
+/>
+```
+
+**19.2 — Adicionar botão de acesso no `index.tsx`:**
+
+No início do componente, adicione `<Stack.Screen>` inline para customizar o header:
+
+```typescript
+import { Stack } from 'expo-router';
+
+export default function HomeScreen() {
+  const router = useRouter();
+  // ...
+
+  return (
+    <>
+      <Stack.Screen
+        options={{
+          headerRight: () => (
+            <TouchableOpacity onPress={() => router.push('/profile')}>
+              <Text className="text-3xl mr-4">👤</Text>
+            </TouchableOpacity>
+          ),
+        }}
+      />
+      {/* Restante da UI... */}
+    </>
+  );
+}
+```
+
+> **Por que `<Stack.Screen>` inline e não no `_layout.tsx`?**  
+> No `_layout.tsx` só temos opções **estáticas**.  
+> O `headerRight` precisa acessar o `router` do componente para navegar — por isso definimos inline, com acesso ao escopo da tela.
+
+---
+
 ## 🏗️ Arquitetura do Projeto
 
 ```
-┌─────────────────────────────────────────────────┐
-│                    TELAS (UI)                   │
-│   app/index.tsx          app/form.tsx           │
-│   (Lista de tarefas)     (Formulário add/edit)  │
-└──────────────────┬──────────────────────────────┘
-                   │ usa
-┌──────────────────▼──────────────────────────────┐
-│              HOOK CUSTOMIZADO                   │
-│              src/hooks/useTasks.ts              │
-│   (Estado, filtros, chamadas ao repositório)    │
-└──────────────────┬──────────────────────────────┘
-                   │ chama
-┌──────────────────▼──────────────────────────────┐
-│           REPOSITÓRIO (Camada de Dados)         │
-│        src/database/taskRepository.ts           │
-│   (getTasks, createTask, updateTask, delete...) │
-└──────────────────┬──────────────────────────────┘
-                   │ usa
-┌──────────────────▼──────────────────────────────┐
-│              BANCO DE DADOS (SQLite)            │
-│           src/database/database.ts              │
-│   (Conexão Singleton, Migrações, Tabelas)       │
-└─────────────────────────────────────────────────┘
+┌──────────────── MÓDULO DE TAREFAS ────────────────┐   ┌───────────── MÓDULO DE PERFIL ───────────────┐
+│                                                    │   │                                              │
+│  ┌──────────────────────────────────────────┐     │   │  ┌────────────────────────────────────────┐  │
+│  │          TELAS (UI)                      │     │   │  │          TELA (UI)                     │  │
+│  │  app/index.tsx    app/form.tsx           │     │   │  │      app/profile.tsx                   │  │
+│  │  (Lista)          (Add/Edit)             │     │   │  │  (Nome, email, foto)                   │  │
+│  └──────────────┬───────────────────────────┘     │   │  └────────────┬───────────────────────────┘  │
+│                 │ usa                              │   │               │ usa                          │
+│  ┌──────────────▼───────────────────────────┐     │   │  ┌────────────▼───────────────────────────┐  │
+│  │       HOOK CUSTOMIZADO                   │     │   │  │       HOOK CUSTOMIZADO                 │  │
+│  │       src/hooks/useTasks.ts              │     │   │  │       src/hooks/useProfile.ts          │  │
+│  │  (Estado, filtros, operações CRUD)       │     │   │  │  (Estado, salvamento)                  │  │
+│  └──────────────┬───────────────────────────┘     │   │  └────────────┬───────────────────────────┘  │
+│                 │ chama                            │   │               │ chama                        │
+│  ┌──────────────▼───────────────────────────┐     │   │  ┌────────────▼───────────────────────────┐  │
+│  │       REPOSITÓRIO (Camada de Dados)      │     │   │  │       REPOSITÓRIO (Camada de Dados)    │  │
+│  │     src/database/taskRepository.ts       │     │   │  │     src/database/profileRepository.ts  │  │
+│  │  (Operações SQL: CRUD tarefas)           │     │   │  │  (Operações SQL: upsert)               │  │
+│  └──────────────┬───────────────────────────┘     │   │  └────────────┬───────────────────────────┘  │
+│                 │                                  │   │               │                              │
+└─────────────────┼──────────────────────────────────┘   └───────────────┼──────────────────────────────┘
+                  │                                                      │
+                  │                ┌─────────────────────────────────────┘
+                  │                │
+       ┌──────────▼────────────────▼──────────────────┐
+       │      BANCO DE DADOS (SQLite)                 │
+       │      src/database/database.ts                │
+       │  (Conexão Singleton, Migrações, 2 Tabelas)   │
+       │      • tasks (múltiplos registros)           │
+       │      • profile (registro único)              │
+       └──────────────────────────────────────────────┘
 ```
 
-Esta arquitetura em camadas garante que cada parte do sistema tenha **uma única responsabilidade** clara:
+### Arquitetura em Camadas com Dois Módulos Paralelos
 
-- **Telas**: mostrar dados e capturar interações do usuário
-- **Hook**: gerenciar estado e orquestrar operações
-- **Repositório**: traduzir operações de negócio em SQL
-- **Database**: conexão e estrutura do banco
+Esta arquitetura demonstra **separação por módulos** e **reutilização de padrões**:
+
+**Camadas (de cima para baixo):**
+
+- **TELAS (UI)**: capturam interações e exibem dados — NÃO contêm lógica de negócio
+- **HOOKS CUSTOMIZADOS**: gerenciam estado e orquestram operações — isolam lógica reutilizável
+- **REPOSITÓRIOS**: abstraem acesso ao SQLite — traduzem operações em SQL seguro (bind params)
+- **DATABASE**: ponto único de conexão — garante consistência com padrão Singleton
+
+**Vantagens desta arquitetura:**
+
+- ✅ **Testabilidade**: cada camada pode ser testada isoladamente
+- ✅ **Manutenibilidade**: mudanças em uma camada não afetam as outras
+- ✅ **Reutilização**: mesmo padrão repetido em Tarefas e Perfil
+- ✅ **Escalabilidade**: adicionar novo módulo (ex: Configurações) segue o mesmo template
 
 ---
 
@@ -754,7 +1121,101 @@ const tarefa = await db.getFirstAsync<Task>(
 
 ---
 
-## � Solução de Problemas
+### expo-camera — Acesso ao Hardware do Dispositivo
+
+O `expo-camera` permite acessar a câmera nativa (iOS e Android) via JavaScript, com gerenciamento de permissões integrado.
+
+**Hook de permissões:**
+
+```typescript
+const [permission, requestPermission] = useCameraPermissions();
+
+if (!permission) return <Text>Verificando...</Text>;
+if (!permission.granted) {
+  return <Button onPress={requestPermission}>Conceder Permissão</Button>;
+}
+```
+
+**Fluxo de estados:**
+
+1. `null` → ainda não verificou (inicial)
+2. `granted: false` → usuário negou ou ainda não respondeu
+3. `granted: true` → pode acessar a câmera
+
+**Captura de foto com referência:**
+
+```typescript
+const cameraRef = useRef<CameraView>(null);
+
+<CameraView ref={cameraRef} facing="back">
+  <Button onPress={async () => {
+    const photo = await cameraRef.current?.takePictureAsync({ quality: 0.7 });
+    console.log(photo.uri); // URI temporário do arquivo
+  }} />
+</CameraView>
+```
+
+**Importante:** O URI retornado é **temporário** (no cache) — use `expo-file-system` para copiar para local permanente!
+
+---
+
+### expo-file-system — Manipulação de Arquivos Permanentes
+
+O `expo-file-system` fornece APIs para ler, escrever, copiar e deletar arquivos no sistema de arquivos do dispositivo.
+
+**Diretórios principais:**
+
+```typescript
+FileSystem.documentDirectory; // Permanente: sobrevive até desinstalar o app
+// iOS: /var/mobile/.../Documents/
+// Android: /data/user/0/.../files/
+
+FileSystem.cacheDirectory; // Temporário: pode ser limpo pelo sistema
+// iOS: /var/mobile/.../Library/Caches/
+// Android: /data/user/0/.../cache/
+```
+
+**Copiar arquivo (ex: foto da câmera):**
+
+```typescript
+const tempUri = 'file:///cache/Camera/photo-123.jpg'; // URI temporário
+const fileName = `profile-${Date.now()}.jpg`;
+const permanentUri = FileSystem.documentDirectory + fileName;
+
+await FileSystem.copyAsync({
+  from: tempUri,
+  to: permanentUri,
+});
+
+// Agora salve `permanentUri` no SQLite — ele sobrevive ao fechar o app!
+```
+
+**Por que copiar em vez de usar direto o URI temporário?**
+
+- ❌ URIs da câmera são voláteis (sistema pode deletar a qualquer momento)
+- ✅ `documentDirectory` garante persistência até o app ser desinstalado
+- ✅ Permite controle total sobre quando deletar arquivos antigos
+
+**Outras operações úteis:**
+
+```typescript
+// Ler arquivo como string
+const content = await FileSystem.readAsStringAsync(uri);
+
+// Escrever arquivo
+await FileSystem.writeAsStringAsync(uri, 'conteúdo', { encoding: 'utf8' });
+
+// Deletar arquivo
+await FileSystem.deleteAsync(uri);
+
+// Obter informações do arquivo
+const info = await FileSystem.getInfoAsync(uri);
+console.log(info.exists, info.size); // boolean, number (bytes)
+```
+
+---
+
+## 🔧 Solução de Problemas
 
 ### `Cannot find module 'react-native-worklets/plugin'`
 
