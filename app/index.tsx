@@ -38,6 +38,7 @@ import {
 import { useRouter, Stack } from 'expo-router';
 
 import { useTasks } from '../src/hooks/useTasks';
+import { useAuthContext } from '../src/contexts/AuthContext';
 import { TaskItem } from '../src/components/TaskItem';
 import { FilterBar } from '../src/components/FilterBar';
 import { EmptyState } from '../src/components/EmptyState';
@@ -51,6 +52,7 @@ import { EmptyState } from '../src/components/EmptyState';
  */
 export default function HomeScreen() {
   const router = useRouter();
+  const { signOut } = useAuthContext();
 
   // Desestrutura tudo que o hook expõe — veja src/hooks/useTasks.ts
   const {
@@ -99,24 +101,37 @@ export default function HomeScreen() {
        *
        * Por que inline e não no _layout.tsx?
        * ─────────────────────────────────────
-       * No `_layout.tsx` só temos OPÇÕES ESTÁTICAS. Aqui precisamos do
-       * `router` para navegar ao pressionar o botão — por isso definimos
-       * o `headerRight` inline, acessando o router da tela.
+       * No `_layout.tsx` só temos OPÇÕES ESTÁTICAS. Aqui precisamos:
+       * - do `router` para navegar ao perfil
+       * - do `signOut` do contexto para fazer logout
        *
        * O `headerRight` recebe uma função que retorna o JSX a ser renderizado
-       * no canto direito do header. Usamos um botão com ícone de usuário
-       * que navega para a rota `/profile`.
+       * no canto direito do header. Renderizamos DOIS botões lado a lado:
+       * 1. Botão de perfil (ícone de usuário)
+       * 2. Botão de sair (ícone de logout)
        */}
       <Stack.Screen
         options={{
           headerRight: () => (
-            <TouchableOpacity
-              onPress={() => router.push('/profile')}
-              accessibilityLabel="Abrir perfil"
-              accessibilityRole="button"
-            >
-              <Text className="text-3xl">👤</Text>
-            </TouchableOpacity>
+            <View className="flex-row gap-4">
+              {/* Botão de Perfil */}
+              <TouchableOpacity
+                onPress={() => router.push('/profile')}
+                accessibilityLabel="Abrir perfil"
+                accessibilityRole="button"
+              >
+                <Text className="text-3xl">👤</Text>
+              </TouchableOpacity>
+
+              {/* Botão de Logout */}
+              <TouchableOpacity
+                onPress={signOut}
+                accessibilityLabel="Sair"
+                accessibilityRole="button"
+              >
+                <Text className="text-3xl">🚪</Text>
+              </TouchableOpacity>
+            </View>
           ),
         }}
       />

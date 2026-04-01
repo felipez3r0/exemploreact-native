@@ -3,7 +3,7 @@
 > Repositório educacional da disciplina **Desenvolvimento para Dispositivos Móveis**  
 > Fatec — Análise e Desenvolvimento de Sistemas
 
-Um aplicativo completo de **Lista de Tarefas** construído com React Native e Expo, utilizando SQLite para persistência local de dados. Este projeto foi criado como guia prático para você aprender os conceitos fundamentais do desenvolvimento mobile com React Native.
+Um aplicativo completo de **Lista de Tarefas** construído com React Native e Expo, utilizando **SQLite** para persistência local de dados e **Firebase Authentication** para autenticação de usuários. Este projeto foi criado como guia prático para você aprender os conceitos fundamentais do desenvolvimento mobile com React Native.
 
 ---
 
@@ -15,27 +15,42 @@ Ao estudar e reproduzir este projeto, você terá contato com:
 - 📱 **Expo SDK 55** e o ecossistema Expo
 - 🗂️ **Expo Router** — roteamento baseado em arquivos (como Next.js para mobile)
 - 🗄️ **expo-sqlite** — banco de dados local com SQL no dispositivo
+- 🔐 **Firebase Authentication** — login com email/senha e Google Sign-In
+- 🌐 **expo-auth-session** — fluxos OAuth 2.0 (Google, Facebook, etc.)
 - 🎨 **NativeWind** — Tailwind CSS no React Native
 - 🔷 **TypeScript** — tipagem estática para segurança e produtividade
-- 🪝 **Custom Hooks** — separação de lógica com `useTasks`
-- 🏗️ **Boas práticas** — Repository Pattern, Separation of Concerns, DRY
+- 🪝 **Custom Hooks** — separação de lógica com `useTasks`, `useProfile`, `useAuth`
+- 🧩 **React Context API** — compartilhamento de estado global sem prop drilling
+- 🏗️ **Boas práticas** — Repository Pattern, Separation of Concerns, Service Layer
 - 📷 **expo-camera** — captura de fotos com a câmera do dispositivo
 - 📁 **expo-file-system** — persistência de arquivos no armazenamento local
 - 🔐 **Permissões de hardware** — como solicitar e tratar permissões em tempo de execução
+- 🔒 **Proteção de rotas** — redirecionamento condicional baseado em autenticação
+- 🌍 **Variáveis de ambiente** — usando .env com o prefixo `EXPO_PUBLIC_`
 
 ---
 
 ## 📱 Funcionalidades do App
 
-| Funcionalidade        | Descrição                                            |
-| --------------------- | ---------------------------------------------------- |
-| ➕ Adicionar tarefa   | Título e descrição com validação                     |
-| ✅ Concluir tarefa    | Toggle de status com visual atualizado               |
-| ✏️ Editar tarefa      | Edição de título e descrição                         |
-| 🗑️ Excluir tarefa     | Com confirmação de segurança                         |
-| 🔍 Filtrar tarefas    | Por: Todas / Pendentes / Concluídas                  |
-| 💾 Persistência local | Dados salvos com SQLite — sobrevivem ao fechar o app |
-| 👤 Perfil do usuário  | Nome, email e foto capturada diretamente pela câmera |
+| Funcionalidade                   | Descrição                                                   |
+| -------------------------------- | ----------------------------------------------------------- |
+| 🔐 **Autenticação**              |                                                             |
+| &nbsp;&nbsp;📧 Login email/senha | Cadastro e login com Firebase Authentication                |
+| &nbsp;&nbsp;🔍 Login Google      | OAuth 2.0 via Expo Auth Session (browser nativo)            |
+| &nbsp;&nbsp;🚪 Logout            | Limpa sessão e redireciona para tela de login               |
+| &nbsp;&nbsp;🔒 Rotas protegidas  | Redirecionamento automático se não autenticado              |
+| **Tarefas**                      |                                                             |
+| &nbsp;&nbsp;➕ Adicionar         | Título e descrição com validação                            |
+| &nbsp;&nbsp;✅ Concluir          | Toggle de status com visual atualizado                      |
+| &nbsp;&nbsp;✏️ Editar            | Edição de título e descrição                                |
+| &nbsp;&nbsp;🗑️ Excluir           | Com confirmação de segurança                                |
+| &nbsp;&nbsp;🔍 Filtrar           | Por: Todas / Pendentes / Concluídas                         |
+| **Perfil**                       |                                                             |
+| &nbsp;&nbsp;👤 Dados             | Nome, email e foto                                          |
+| &nbsp;&nbsp;📷 Câmera            | Captura de foto com expo-camera                             |
+| **Persistência**                 |                                                             |
+| &nbsp;&nbsp;💾 Local (SQLite)    | Tarefas e perfil salvos localmente                          |
+| &nbsp;&nbsp;☁️ Nuvem (Firebase)  | Token de autenticação persiste entre sessões (AsyncStorage) |
 
 ---
 
@@ -81,7 +96,9 @@ Instale o app **Expo Go** pela loja do seu dispositivo:
 exemploreact-native/
 │
 ├── app/                          ← Telas do app (roteamento Expo Router)
-│   ├── _layout.tsx               ← Layout raiz + configuração do Stack
+│   ├── _layout.tsx               ← Layout raiz + AuthProvider + proteção de rotas
+│   ├── login.tsx                 ← Tela de login (email/senha + Google)
+│   ├── register.tsx              ← Tela de cadastro (email/senha)
 │   ├── index.tsx                 ← Tela principal (lista de tarefas)
 │   ├── form.tsx                  ← Formulário de adicionar/editar
 │   └── profile.tsx               ← Tela de perfil do usuário
@@ -89,14 +106,20 @@ exemploreact-native/
 ├── src/                          ← Código fonte da aplicação
 │   ├── types/
 │   │   ├── task.ts               ← Interfaces e tipos TypeScript (tarefas)
-│   │   └── profile.ts            ← Interfaces e tipos TypeScript (perfil)
+│   │   ├── profile.ts            ← Interfaces e tipos TypeScript (perfil)
+│   │   └── auth.ts               ← Interfaces e tipos TypeScript (autenticação)
+│   ├── services/
+│   │   └── firebaseConfig.ts     ← Configuração e inicialização do Firebase
 │   ├── database/
 │   │   ├── database.ts           ← Conexão com o SQLite (Singleton)
 │   │   ├── taskRepository.ts     ← Operações CRUD (Repository Pattern - tasks)
 │   │   └── profileRepository.ts  ← Operações CRUD (Repository Pattern - profile)
+│   ├── contexts/
+│   │   └── AuthContext.tsx       ← Contexto global de autenticação (React Context API)
 │   ├── hooks/
 │   │   ├── useTasks.ts           ← Hook customizado com lógica de negócio (tasks)
-│   │   └── useProfile.ts         ← Hook customizado com lógica de negócio (profile)
+│   │   ├── useProfile.ts         ← Hook customizado com lógica de negócio (profile)
+│   │   └── useAuth.ts            ← Hook customizado de autenticação (Firebase)
 │   └── components/
 │       ├── TaskItem.tsx           ← Item individual da lista
 │       ├── FilterBar.tsx          ← Barra de filtros (Todas/Pendentes/Concluídas)
@@ -104,6 +127,8 @@ exemploreact-native/
 │       └── CameraCapture.tsx      ← Componente de captura de foto com câmera
 │
 ├── assets/                       ← Imagens, ícones, fontes
+├── .env                          ← Variáveis de ambiente (NÃO commitar!)
+├── .env.example                  ← Modelo de variáveis de ambiente
 ├── global.css                    ← Diretivas @tailwind (NativeWind)
 ├── tailwind.config.js            ← Configuração do Tailwind/NativeWind
 ├── babel.config.js               ← Configuração do transpilador Babel
@@ -113,6 +138,29 @@ exemploreact-native/
 ├── tsconfig.json                 ← Configuração do TypeScript
 └── package.json                  ← Dependências e scripts npm
 ```
+
+**Destaques da estrutura:**
+
+- **`app/`** — Rotas baseadas em arquivos (Expo Router). Cada `.tsx` vira uma rota automaticamente.
+- **`src/services/`** — Integrações com serviços externos (Firebase, APIs REST).
+- **`src/contexts/`** — Contextos React para estado global (autenticação).
+- **`src/hooks/`** — Lógica de negócio reutilizável extraída dos componentes.
+- **`src/database/`** — Camada de acesso a dados local (SQLite).
+- **`.env` / `.env.example`** — Variáveis de ambiente para configuração sensível.
+
+---
+
+├── assets/ ← Imagens, ícones, fontes
+├── global.css ← Diretivas @tailwind (NativeWind)
+├── tailwind.config.js ← Configuração do Tailwind/NativeWind
+├── babel.config.js ← Configuração do transpilador Babel
+├── metro.config.js ← Configuração do bundler Metro
+├── nativewind-env.d.ts ← Tipos TypeScript para className
+├── app.json ← Configuração do app Expo
+├── tsconfig.json ← Configuração do TypeScript
+└── package.json ← Dependências e scripts npm
+
+````
 
 ---
 
@@ -128,7 +176,7 @@ Abra o terminal na pasta onde deseja criar o projeto e execute:
 
 ```bash
 npx create-expo-app@latest meu-lista-tarefas --template blank-typescript
-```
+````
 
 Quando perguntar se pode instalar o `create-expo-app`, pressione `y` e Enter.
 
@@ -997,52 +1045,1031 @@ export default function HomeScreen() {
 
 ---
 
+## 🔐 Módulo de Autenticação com Firebase
+
+As próximas etapas adicionam um sistema completo de autenticação usando **Firebase Authentication**, permitindo login com email/senha e Google Sign-In.
+
+### ETAPA 20 — Instalar Dependências de Autenticação
+
+Instale os pacotes do Firebase e do sistema de autenticação OAuth:
+
+```bash
+npm install firebase
+
+npx expo install expo-auth-session expo-web-browser expo-crypto @react-native-async-storage/async-storage
+```
+
+> **O que cada pacote faz?**
+>
+> - `firebase` → SDK JavaScript do Firebase (autenticação, Firestore, Storage, etc.)
+> - `expo-auth-session` → Gerencia fluxos OAuth 2.0 (login com Google, Facebook, etc.)
+> - `expo-web-browser` → Abre o browser nativo para autenticação OAuth
+> - `expo-crypto` → Funções criptográficas (dependência do expo-auth-session)
+> - `@react-native-async-storage/async-storage` → Armazenamento local persistente (salva token de autenticação)
+
+> **Por que Firebase JS SDK e não `@react-native-firebase`?**  
+> O Firebase JS SDK funciona perfeitamente no Expo Go sem precisar de build nativo.  
+> O pacote `@react-native-firebase` exige EAS Build (compilação nativa) — não roda no Expo Go.
+
+---
+
+### ETAPA 21 — Configurar Projeto no Firebase Console
+
+**Esta etapa é MANUAL** — você precisará acessar o Firebase Console no navegador:
+
+**21.1 — Criar projeto no Firebase:**
+
+1. Acesse https://console.firebase.google.com
+2. Clique em "Adicionar projeto"
+3. Nome do projeto: `lista-tarefas-app` (ou qualquer nome)
+4. Desabilite o Google Analytics (opcional para projetos educacionais)
+5. Clique em "Criar projeto"
+
+**21.2 — Registrar o app no Firebase:**
+
+1. No painel do projeto, clique no ícone de código **</>** (Web)
+2. Apelido do app: `Lista de Tarefas`
+3. **NÃO** marque "Configure Firebase Hosting"
+4. Clique em "Registrar app"
+5. **COPIE** o objeto `firebaseConfig` que aparece na tela (você precisará dele na ETAPA 22)
+6. Clique em "Continuar no console"
+
+**21.3 — Habilitar Email/Password Authentication:**
+
+1. No menu lateral, vá em **"Authentication"**
+2. Clique em **"Começar"** (ou "Get Started")
+3. Vá na aba **"Sign-in method"**
+4. Clique em **"Email/Password"**
+5. Ative a opção **"Email/Password"** (toggle para ON)
+6. **NÃO** ative "E-mail link (passwordless sign-in)" por enquanto
+7. Clique em **"Salvar"**
+
+**21.4 — Habilitar Google Sign-In:**
+
+1. Ainda na mesma tela (**Authentication > Sign-in method**)
+2. Clique em **"Google"**
+3. Ative o toggle **"Ativar"**
+4. Em "Endereço de e-mail de suporte do projeto", selecione seu email
+5. Clique em **"Salvar"**
+
+**21.5 — Obter o Web Client ID do Google:**
+
+1. Ainda na tela de configuração do Google (mantenha aberta)
+2. Role para baixo até a seção **"Configurar SDK da Web"**
+3. **COPIE** o valor do campo **"ID do cliente da Web"** (algo como `123456-abc.apps.googleusercontent.com`)
+4. Salve esse valor — você precisará dele no `.env` na próxima etapa!
+
+> **Importante sobre o Google Client ID:**  
+> Este ID é para uso no **Expo Go** (ambiente de desenvolvimento).  
+> Para builds de produção (APK/IPA), você precisará dos Client IDs de iOS e Android — veja a ETAPA 31.
+
+---
+
+### ETAPA 22 — Configurar Variáveis de Ambiente
+
+**22.1 — Crie o arquivo `.env`** na raiz do projeto:
+
+```bash
+cp .env.example .env
+```
+
+Ou crie manualmente um arquivo `.env` com o seguinte conteúdo:
+
+```env
+# Firebase Config (obtenha em: Firebase Console > Configurações do Projeto > Seus Aplicativos)
+EXPO_PUBLIC_FIREBASE_API_KEY=sua-api-key-aqui
+EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=seu-projeto.firebaseapp.com
+EXPO_PUBLIC_FIREBASE_PROJECT_ID=seu-projeto-id
+EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=seu-projeto.appspot.com
+EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=123456789
+EXPO_PUBLIC_FIREBASE_APP_ID=1:123456789:web:abc123def456
+
+# Google OAuth Client ID (Web) — para Expo Go (obtenha na ETAPA 21.5)
+EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID=123456-abc.apps.googleusercontent.com
+```
+
+**Substitua os valores** pelos da sua conta Firebase (copiados na ETAPA 21).
+
+> **O que é `EXPO_PUBLIC_`?**  
+> Desde o Expo SDK 49+, **toda variável de ambiente** com o prefixo `EXPO_PUBLIC_` é automaticamente carregada pelo Expo CLI e disponibilizada em `process.env`.  
+> Sem esse prefixo, a variável NÃO seria acessível no código JavaScript.
+
+> **Diferença entre buildtime e runtime:**  
+> As variáveis `EXPO_PUBLIC_*` são substituídas em **tempo de BUILD** (quando o bundler Metro processa o código).  
+> Se você mudar o `.env`, precisa **reiniciar o servidor** (`Ctrl+C` → `npx expo start`) para as mudanças aparecerem.
+
+> **Por que .env não deve ser commitado no Git?**  
+> O `.env` contém valores específicos do SEU projeto Firebase. Se outra pessoa clonar seu repositório, ela precisará criar o PRÓPRIO projeto Firebase e preencher com as chaves dela.  
+> Por isso, o `.env` está no `.gitignore` e temos o `.env.example` (modelo sem valores reais) para documentar quais variáveis são necessárias.
+
+**22.2 — Verificar se `.env` está no `.gitignore`:**
+
+Abra `.gitignore` e confirme que há a linha:
+
+```
+.env
+```
+
+Se não houver, adicione-a manualmente.
+
+**22.3 — Reiniciar o servidor de desenvolvimento:**
+
+Pare o servidor (`Ctrl+C`) e reinicie para carregar as variáveis:
+
+```bash
+npx expo start
+```
+
+---
+
+### ETAPA 23 — Criar os Tipos de Autenticação
+
+Crie `src/types/auth.ts`:
+
+```typescript
+/**
+ * Interface que representa o usuário autenticado.
+ * Mapeado do objeto `User` do Firebase, contendo apenas as propriedades utilizadas.
+ */
+export interface AuthUser {
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  photoURL: string | null;
+}
+
+/**
+ * Interface de retorno do hook `useAuth`.
+ */
+export interface UseAuthReturn {
+  user: AuthUser | null;
+  loading: boolean;
+  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
+  signOut: () => Promise<void>;
+}
+
+/**
+ * Tipo do contexto de autenticação (mesmo que UseAuthReturn).
+ */
+export type AuthContextType = UseAuthReturn;
+```
+
+> **Por que criar um tipo `AuthUser` personalizado?**  
+> O Firebase retorna um objeto `User` com **mais de 30 propriedades** (refresh token, metadata, providers, etc.).  
+> Na nossa UI, só usamos 4 campos. Mapear para nosso próprio tipo:
+>
+> - Simplifica o código (menos propriedades para lembrar)
+> - Desacopla da implementação do Firebase (se mudarmos de provedor no futuro, só mudamos o hook)
+> - Melhora a documentação (TypeScript mostra exatamente o que está disponível)
+
+---
+
+### ETAPA 24 — Criar o Serviço de Configuração do Firebase
+
+**24.1 — Crie a pasta `src/services/`:**
+
+```bash
+mkdir src/services
+```
+
+**24.2 — Crie o arquivo `src/services/firebaseConfig.ts`:**
+
+```typescript
+import { initializeApp } from 'firebase/app';
+import {
+  initializeAuth,
+  getReactNativePersistence,
+  type Auth,
+} from 'firebase/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const firebaseConfig = {
+  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
+};
+
+const app = initializeApp(firebaseConfig);
+
+export const auth: Auth = initializeAuth(app, {
+  persistence: getReactNativePersistence(AsyncStorage),
+});
+
+export default app;
+```
+
+> **Por que `initializeAuth` em vez de `getAuth`?**  
+> No React Native, não existe `localStorage` (que o Firebase usa por padrão na web).  
+> `initializeAuth` permite configurar um **adapter de persistência** personalizado.  
+> Usamos `AsyncStorage` para salvar o token de autenticação no dispositivo — assim o usuário permanece logado mesmo após fechar o app!
+
+> **Nova pasta `services/`:**  
+> Até agora tínhamos `database/` (SQLite local) e `hooks/` (lógica de estado).  
+> Agora adicionamos `services/` para código que **integra com serviços externos** (Firebase, APIs REST, etc.).  
+> Isso mantém a separação de responsabilidades clara.
+
+---
+
+### ETAPA 25 — Criar o Hook useAuth
+
+Crie `src/hooks/useAuth.ts`:
+
+```typescript
+import { useState, useEffect, useCallback } from 'react';
+import {
+  signInWithEmailAndPassword as firebaseSignIn,
+  createUserWithEmailAndPassword as firebaseSignUp,
+  signOut as firebaseSignOut,
+  onAuthStateChanged,
+  GoogleAuthProvider,
+  signInWithCredential,
+  type User,
+} from 'firebase/auth';
+import * as Google from 'expo-auth-session/providers/google';
+import * as WebBrowser from 'expo-web-browser';
+import { auth } from '../services/firebaseConfig';
+import { AuthUser, UseAuthReturn } from '../types/auth';
+
+WebBrowser.mayInitWithUrl();
+
+export function useAuth(): UseAuthReturn {
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const [request, response, promptAsync] = Google.useAuthRequest({
+    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+  });
+
+  useEffect(() => {
+    if (response?.type === 'success') {
+      const { id_token } = response.params;
+      const credential = GoogleAuthProvider.credential(id_token);
+      signInWithCredential(auth, credential).catch((error) => {
+        console.error('Erro ao fazer login com Google:', error);
+        alert('Erro ao fazer login com Google. Tente novamente.');
+      });
+    }
+  }, [response]);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(
+      auth,
+      (firebaseUser: User | null) => {
+        if (firebaseUser) {
+          const mappedUser: AuthUser = {
+            uid: firebaseUser.uid,
+            email: firebaseUser.email,
+            displayName: firebaseUser.displayName,
+            photoURL: firebaseUser.photoURL,
+          };
+          setUser(mappedUser);
+        } else {
+          setUser(null);
+        }
+        setLoading(false);
+      },
+    );
+
+    return unsubscribe;
+  }, []);
+
+  const signIn = useCallback(async (email: string, password: string) => {
+    try {
+      await firebaseSignIn(auth, email, password);
+    } catch (error: any) {
+      console.error('Erro ao fazer login:', error);
+      const message = getErrorMessage(error.code);
+      throw new Error(message);
+    }
+  }, []);
+
+  const signUp = useCallback(async (email: string, password: string) => {
+    try {
+      await firebaseSignUp(auth, email, password);
+    } catch (error: any) {
+      console.error('Erro ao criar conta:', error);
+      const message = getErrorMessage(error.code);
+      throw new Error(message);
+    }
+  }, []);
+
+  const signInWithGoogle = useCallback(async () => {
+    if (!request) {
+      alert('Configuração do Google ainda não está pronta. Aguarde...');
+      return;
+    }
+    await promptAsync();
+  }, [request, promptAsync]);
+
+  const signOut = useCallback(async () => {
+    try {
+      await firebaseSignOut(auth);
+    } catch (error: any) {
+      console.error('Erro ao fazer logout:', error);
+      alert('Erro ao sair. Tente novamente.');
+    }
+  }, []);
+
+  return {
+    user,
+    loading,
+    signIn,
+    signUp,
+    signInWithGoogle,
+    signOut,
+  };
+}
+
+function getErrorMessage(code: string): string {
+  const messages: Record<string, string> = {
+    'auth/user-not-found': 'Email não cadastrado.',
+    'auth/wrong-password': 'Senha incorreta.',
+    'auth/email-already-in-use': 'Este email já está em uso.',
+    'auth/weak-password': 'A senha deve ter pelo menos 6 caracteres.',
+    'auth/invalid-email': 'Email inválido.',
+    'auth/too-many-requests':
+      'Muitas tentativas. Tente novamente mais tarde ou redefina sua senha.',
+    'auth/network-request-failed': 'Erro de conexão. Verifique sua internet.',
+  };
+
+  return messages[code] || 'Erro ao processar sua solicitação.';
+}
+```
+
+> **O que é `onAuthStateChanged`?**  
+> É um **observador** do Firebase que dispara automaticamente quando:
+>
+> - O app inicia (verifica se há token salvo)
+> - O usuário faz login
+> - O usuário faz logout
+> - O token expira e é renovado
+>
+> Isso elimina a necessidade de verificar manualmente o estado de autenticação!
+
+> **Como funciona o Google Sign-In?**
+>
+> 1. `Google.useAuthRequest` configura o fluxo OAuth
+> 2. `promptAsync()` abre o browser de autenticação
+> 3. Usuário autoriza o app
+> 4. O browser fecha e retorna com um `id_token`
+> 5. Criamos uma credencial Firebase com esse token
+> 6. Fazemos login no Firebase com `signInWithCredential`
+> 7. `onAuthStateChanged` detecta o login e atualiza o estado
+
+---
+
+### ETAPA 26 — Criar o Contexto de Autenticação
+
+**26.1 — Crie a pasta `src/contexts/`:**
+
+```bash
+mkdir src/contexts
+```
+
+**26.2 — Crie o arquivo `src/contexts/AuthContext.tsx`:**
+
+```typescript
+import React, { createContext, useContext, type ReactNode } from 'react';
+import { useAuth } from '../hooks/useAuth';
+import { AuthContextType } from '../types/auth';
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+interface AuthProviderProps {
+  children: ReactNode;
+}
+
+export function AuthProvider({ children }: AuthProviderProps) {
+  const auth = useAuth();
+  return <AuthContext.Provider value={auth}>{children}</AuthContext.Provider>;
+}
+
+export function useAuthContext(): AuthContextType {
+  const context = useContext(AuthContext);
+
+  if (context === undefined) {
+    throw new Error(
+      'useAuthContext deve ser usado dentro de um <AuthProvider>. ' +
+        'Verifique se o componente está envolvido pelo AuthProvider no _layout.tsx.'
+    );
+  }
+
+  return context;
+}
+
+export default AuthProvider;
+```
+
+> **Por que usar Context em vez de chamar `useAuth()` diretamente?**  
+> Se cada tela chamasse `useAuth()`, teríamos **múltiplos observadores** `onAuthStateChanged` (#rodando simultaneamente (ineficiente) e **estados separados** para cada tela (incorreto).  
+> O Context garante que há **um único estado de autenticação** compartilhado por todas as telas.
+
+> **Quando usar Context e quando usar hooks isolados?**
+>
+> | Situação                                       | Solução               | Exemplo no projeto               |
+> | ---------------------------------------------- | --------------------- | -------------------------------- |
+> | Múltiplas telas precisam do MESMO estado       | Context               | Autenticação (user)              |
+> | Telas específicas precisam de dados diferentes | Hook isolado          | Tasks (index), Profile (profile) |
+> | Estado que muda MUITO                          | Hook local (useState) | Campos de formulário             |
+
+---
+
+### ETAPA 27 — Atualizar o Layout com Proteção de Rotas
+
+Modifique `app/_layout.tsx` para envolver o app no `AuthProvider` e implementar redirecionamento automático:
+
+```typescript
+import '../global.css';
+
+import { useEffect } from 'react';
+import { Stack, useRouter, useSegments } from 'expo-router';
+import { AuthProvider, useAuthContext } from '../src/contexts/AuthContext';
+
+export default function RootLayout() {
+  return (
+    <AuthProvider>
+      <RootLayoutNav />
+    </AuthProvider>
+  );
+}
+
+function RootLayoutNav() {
+  const { user, loading } = useAuthContext();
+  const segments = useSegments();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (loading) {
+      return;
+    }
+
+    const inAuthGroup = segments[0] === 'login' || segments[0] === 'register';
+
+    if (!user && !inAuthGroup) {
+      router.replace('/login');
+    } else if (user && inAuthGroup) {
+      router.replace('/');
+    }
+  }, [user, loading, segments]);
+
+  return (
+    <Stack
+      screenOptions={{
+        headerStyle: { backgroundColor: '#4f46e5' },
+        headerTintColor: '#ffffff',
+        headerTitleStyle: { fontWeight: 'bold' },
+        contentStyle: { backgroundColor: '#f9fafb' },
+      }}
+    >
+      <Stack.Screen name="login" options={{ headerShown: false }} />
+      <Stack.Screen name="register" options={{ headerShown: false }} />
+      <Stack.Screen name="index" options={{ title: '📋 Minhas Tarefas' }} />
+      <Stack.Screen name="form" options={{ title: 'Nova Tarefa' }} />
+      <Stack.Screen name="profile" options={{ title: '👤 Meu Perfil' }} />
+    </Stack>
+  );
+}
+```
+
+> **Como funciona a proteção de rotas?**
+>
+> - Se `user === null` e rota não é `/login` nem `/register` → redireciona para `/login`
+> - Se `user !== null` e rota é `/login` ou `/register` → redireciona para `/`
+>
+> Isso garante que usuários não autenticados **nunca** acessem as telas protegidas, e usuários já logados **não vejam** as telas de login.
+
+> **Por que usar `router.replace()` em vez de `router.push()`?**  
+> `replace()` **substitui** a rota atual no histórico, impedindo que o botão voltar leve o usuário de volta para a tela não autorizada (evita loops).
+
+---
+
+### ETAPA 28 — Criar a Tela de Login
+
+Crie `app/login.tsx`:
+
+```typescript
+import React, { useState } from 'react';
+import {
+  View, Text, TextInput, TouchableOpacity, ActivityIndicator,
+  KeyboardAvoidingView, Platform, ScrollView, Alert,
+} from 'react-native';
+import { useRouter } from 'expo-router';
+import { useAuthContext } from '../src/contexts/AuthContext';
+
+export default function LoginScreen() {
+  const router = useRouter();
+  const { user, loading: authLoading, signIn, signInWithGoogle } = useAuthContext();
+
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = async () => {
+    if (!email.trim() || !password.trim()) {
+      Alert.alert('Campos obrigatórios', 'Preencha email e senha.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await signIn(email.trim(), password);
+    } catch (error: any) {
+      Alert.alert('Erro ao fazer login', error.message || 'Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      setLoading(true);
+      await signInWithGoogle();
+    } catch (error: any) {
+      Alert.alert('Erro ao fazer login com Google', error.message || 'Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (authLoading) {
+    return (
+      <View className="flex-1 items-center justify-center bg-gray-50">
+        <ActivityIndicator size="large" color="#4f46e5" />
+        <Text className="mt-4 text-gray-600">Verificando autenticação...</Text>
+      </View>
+    );
+  }
+
+  return (
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      className="flex-1"
+    >
+      <ScrollView
+        contentContainerClassName="flex-1"
+        keyboardShouldPersistTaps="handled"
+      >
+        <View className="flex-1 bg-gray-50 px-6 justify-center">
+          <View className="mb-8">
+            <Text className="text-4xl font-bold text-gray-800 mb-2">
+              Bem-vindo! 👋
+            </Text>
+            <Text className="text-base text-gray-600">
+              Faça login para acessar suas tarefas
+            </Text>
+          </View>
+
+          <View className="mb-6">
+            <Text className="text-sm font-medium text-gray-700 mb-2">Email</Text>
+            <TextInput
+              className="bg-white border border-gray-300 rounded-xl px-4 py-3 text-base text-gray-800"
+              placeholder="seu@email.com"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              editable={!loading}
+            />
+          </View>
+
+          <View className="mb-6">
+            <Text className="text-sm font-medium text-gray-700 mb-2">Senha</Text>
+            <TextInput
+              className="bg-white border border-gray-300 rounded-xl px-4 py-3 text-base text-gray-800"
+              placeholder="••••••••"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              editable={!loading}
+            />
+          </View>
+
+          <TouchableOpacity
+            className={`rounded-xl py-4 mb-4 ${
+              loading ? 'bg-indigo-400' : 'bg-indigo-600'
+            }`}
+            onPress={handleLogin}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#ffffff" />
+            ) : (
+              <Text className="text-white text-center text-base font-semibold">
+                Entrar
+              </Text>
+            )}
+          </TouchableOpacity>
+
+          <View className="flex-row items-center my-6">
+            <View className="flex-1 h-px bg-gray-300" />
+            <Text className="mx-4 text-gray-500 text-sm">OU</Text>
+            <View className="flex-1 h-px bg-gray-300" />
+          </View>
+
+          <TouchableOpacity
+            className="bg-white border border-gray-300 rounded-xl py-4 mb-6 flex-row items-center justify-center"
+            onPress={handleGoogleLogin}
+            disabled={loading}
+          >
+            <Text className="text-2xl mr-3">🔍</Text>
+            <Text className="text-gray-800 text-base font-semibold">
+              Entrar com Google
+            </Text>
+          </TouchableOpacity>
+
+          <View className="flex-row items-center justify-center">
+            <Text className="text-gray-600 text-sm">Não tem uma conta? </Text>
+            <TouchableOpacity
+              onPress={() => router.push('/register')}
+              disabled={loading}
+            >
+              <Text className="text-indigo-600 text-sm font-semibold">
+                Cadastre-se
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
+}
+```
+
+> **Por que `KeyboardAvoidingView`?**  
+> No iOS, o teclado pode sobrepor os campos de input. Este componente ajusta automaticamente o layout, empurrando o conteúdo para cima quando o teclado aparece.
+
+---
+
+### ETAPA 29 — Criar a Tela de Cadastro
+
+Crie `app/register.tsx`:
+
+```typescript
+import React, { useState } from 'react';
+import {
+  View, Text, TextInput, TouchableOpacity, ActivityIndicator,
+  KeyboardAvoidingView, Platform, ScrollView, Alert,
+} from 'react-native';
+import { useRouter } from 'expo-router';
+import { useAuthContext } from '../src/contexts/AuthContext';
+
+export default function RegisterScreen() {
+  const router = useRouter();
+  const { signUp, loading: authLoading } = useAuthContext();
+
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleRegister = async () => {
+    if (!email.trim() || !password.trim() || !confirmPassword.trim()) {
+      Alert.alert('Campos obrigatórios', 'Preencha todos os campos.');
+      return;
+    }
+
+    if (password.length < 6) {
+      Alert.alert(
+        'Senha muito curta',
+        'A senha deve ter pelo menos 6 caracteres.'
+      );
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      Alert.alert('Senhas não coincidem', 'As senhas digitadas são diferentes.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await signUp(email.trim(), password);
+    } catch (error: any) {
+      Alert.alert('Erro ao criar conta', error.message || 'Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (authLoading) {
+    return (
+      <View className="flex-1 items-center justify-center bg-gray-50">
+        <ActivityIndicator size="large" color="#4f46e5" />
+        <Text className="mt-4 text-gray-600">Verificando autenticação...</Text>
+      </View>
+    );
+  }
+
+  return (
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      className="flex-1"
+    >
+      <ScrollView
+        contentContainerClassName="flex-1"
+        keyboardShouldPersistTaps="handled"
+      >
+        <View className="flex-1 bg-gray-50 px-6 justify-center">
+          <View className="mb-8">
+            <Text className="text-4xl font-bold text-gray-800 mb-2">
+              Criar conta 🚀
+            </Text>
+            <Text className="text-base text-gray-600">
+              Cadastre-se para começar a organizar suas tarefas
+            </Text>
+          </View>
+
+          <View className="mb-6">
+            <Text className="text-sm font-medium text-gray-700 mb-2">Email</Text>
+            <TextInput
+              className="bg-white border border-gray-300 rounded-xl px-4 py-3 text-base text-gray-800"
+              placeholder="seu@email.com"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              editable={!loading}
+            />
+          </View>
+
+          <View className="mb-6">
+            <Text className="text-sm font-medium text-gray-700 mb-2">Senha</Text>
+            <TextInput
+              className="bg-white border border-gray-300 rounded-xl px-4 py-3 text-base text-gray-800"
+              placeholder="Mínimo 6 caracteres"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              editable={!loading}
+            />
+          </View>
+
+          <View className="mb-6">
+            <Text className="text-sm font-medium text-gray-700 mb-2">
+              Confirmar senha
+            </Text>
+            <TextInput
+              className="bg-white border border-gray-300 rounded-xl px-4 py-3 text-base text-gray-800"
+              placeholder="Digite a senha novamente"
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              editable={!loading}
+            />
+          </View>
+
+          <TouchableOpacity
+            className={`rounded-xl py-4 mb-6 ${
+              loading ? 'bg-indigo-400' : 'bg-indigo-600'
+            }`}
+            onPress={handleRegister}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#ffffff" />
+            ) : (
+              <Text className="text-white text-center text-base font-semibold">
+                Criar conta
+              </Text>
+            )}
+          </TouchableOpacity>
+
+          <View className="flex-row items-center justify-center">
+            <Text className="text-gray-600 text-sm">Já tem uma conta? </Text>
+            <TouchableOpacity
+              onPress={() => router.back()}
+              disabled={loading}
+            >
+              <Text className="text-indigo-600 text-sm font-semibold">
+                Entrar
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
+}
+```
+
+> **Comportamento após cadastro:**  
+> O Firebase **automaticamente faz login** após criar a conta com `createUserWithEmailAndPassword`.  
+> O `onAuthStateChanged` detecta isso e atualiza o estado `user`, acionando o redirecionamento para `/` no `_layout.tsx`.
+
+---
+
+### ETAPA 30 — Adicionar Botão de Logout
+
+Modifique `app/index.tsx` para adicionar o botão de logout ao header:
+
+```typescript
+// Adicione ao import do topo:
+import { useAuthContext } from '../src/contexts/AuthContext';
+
+// Dentro do componente, após o useRouter():
+const { signOut } = useAuthContext();
+
+// Modifique o Stack.Screen para incluir dois botões:
+<Stack.Screen
+  options={{
+    headerRight: () => (
+      <View className="flex-row gap-4">
+        <TouchableOpacity
+          onPress={() => router.push('/profile')}
+          accessibilityLabel="Abrir perfil"
+          accessibilityRole="button"
+        >
+          <Text className="text-3xl">👤</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={signOut}
+          accessibilityLabel="Sair"
+          accessibilityRole="button"
+        >
+          <Text className="text-3xl">🚪</Text>
+        </TouchableOpacity>
+      </View>
+    ),
+  }}
+/>
+```
+
+Agora o header da tela principal tem dois botões:
+
+- **👤** (perfil) — navega para `/profile`
+- **🚪** (sair) — faz logout e redireciona para `/login`
+
+---
+
+### ETAPA 31 — Google Sign-In para Produção (EAS Build)
+
+**Esta etapa é OPCIONAL** — só é necessária se você for fazer um **build de produção** (APK/IPA) com EAS Build.  
+No **Expo Go** (desenvolvimento com QR Code), apenas o Web Client ID (configurado na ETAPA 22) é suficiente.
+
+**O que muda na produção?**
+
+No Expo Go, o fluxo OAuth acontece no **browser** (como em um app web).  
+Em builds nativos (APK/IPA), o Google SDK nativo é usado e exige **Client IDs específicos para cada plataforma** (iOS e Android).
+
+**31.1 — Obter o iOS Client ID:**
+
+1. No [Google Cloud Console](https://console.cloud.google.com), selecione seu projeto
+2. Vá em **APIs e Serviços > Credenciais**
+3. Clique em **Criar credenciais > ID do cliente OAuth 2.0**
+4. Tipo de aplicativo: **iOS**
+5. ID do pacote: use o valor de `ios.bundleIdentifier` do `app.json` (ex: `com.seuusuario.exemploreactnative`)
+6. Clique em **Criar**
+7. **COPIE** o "ID do cliente" gerado
+
+**31.2 — Obter o Android Client ID:**
+
+1. Ainda em **APIs e Serviços > Credenciais**
+2. Clique em **Criar credenciais > ID do cliente OAuth 2.0**
+3. Tipo de aplicativo: **Android**
+4. Nome do pacote: use o valor de `android.package` do `app.json` (ex: `com.seuusuario.exemploreactnative`)
+5. Certificado SHA-1: obtenha com `eas credentials` ou deixe em branco por enquanto (pode adicionar depois)
+6. Clique em **Criar**
+7. **COPIE** o "ID do cliente" gerado
+
+**31.3 — Adicionar os Client IDs ao `.env`:**
+
+```env
+# Google OAuth Client IDs para builds de produção (EAS Build)
+EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID=123456-ios.apps.googleusercontent.com
+EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID=123456-android.apps.googleusercontent.com
+```
+
+**31.4 — Atualizar o hook `useAuth.ts`:**
+
+Descomente as linhas de Client IDs no `Google.useAuthRequest`:
+
+```typescript
+const [request, response, promptAsync] = Google.useAuthRequest({
+  webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+  // Para builds de produção (EAS), adicione:
+  iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+  androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
+});
+```
+
+Pronto! Agora o Google Sign-In funcionará tanto no Expo Go quanto em builds de produção.
+
+> **Resumo das diferenças:**
+>
+> | Ambiente            | Client ID usado   | Fluxo OAuth       |
+> | ------------------- | ----------------- | ----------------- |
+> | Expo Go             | Web Client ID     | Abre o browser    |
+> | Build iOS (EAS)     | iOS Client ID     | SDK Google nativo |
+> | Build Android (EAS) | Android Client ID | SDK Google nativo |
+
+---
+
 ## 🏗️ Arquitetura do Projeto
 
 ```
-┌──────────────── MÓDULO DE TAREFAS ────────────────┐   ┌───────────── MÓDULO DE PERFIL ───────────────┐
-│                                                    │   │                                              │
-│  ┌──────────────────────────────────────────┐     │   │  ┌────────────────────────────────────────┐  │
-│  │          TELAS (UI)                      │     │   │  │          TELA (UI)                     │  │
-│  │  app/index.tsx    app/form.tsx           │     │   │  │      app/profile.tsx                   │  │
-│  │  (Lista)          (Add/Edit)             │     │   │  │  (Nome, email, foto)                   │  │
-│  └──────────────┬───────────────────────────┘     │   │  └────────────┬───────────────────────────┘  │
-│                 │ usa                              │   │               │ usa                          │
-│  ┌──────────────▼───────────────────────────┐     │   │  ┌────────────▼───────────────────────────┐  │
-│  │       HOOK CUSTOMIZADO                   │     │   │  │       HOOK CUSTOMIZADO                 │  │
-│  │       src/hooks/useTasks.ts              │     │   │  │       src/hooks/useProfile.ts          │  │
-│  │  (Estado, filtros, operações CRUD)       │     │   │  │  (Estado, salvamento)                  │  │
-│  └──────────────┬───────────────────────────┘     │   │  └────────────┬───────────────────────────┘  │
-│                 │ chama                            │   │               │ chama                        │
-│  ┌──────────────▼───────────────────────────┐     │   │  ┌────────────▼───────────────────────────┐  │
-│  │       REPOSITÓRIO (Camada de Dados)      │     │   │  │       REPOSITÓRIO (Camada de Dados)    │  │
-│  │     src/database/taskRepository.ts       │     │   │  │     src/database/profileRepository.ts  │  │
-│  │  (Operações SQL: CRUD tarefas)           │     │   │  │  (Operações SQL: upsert)               │  │
-│  └──────────────┬───────────────────────────┘     │   │  └────────────┬───────────────────────────┘  │
-│                 │                                  │   │               │                              │
-└─────────────────┼──────────────────────────────────┘   └───────────────┼──────────────────────────────┘
-                  │                                                      │
-                  │                ┌─────────────────────────────────────┘
-                  │                │
-       ┌──────────▼────────────────▼──────────────────┐
-       │      BANCO DE DADOS (SQLite)                 │
-       │      src/database/database.ts                │
-       │  (Conexão Singleton, Migrações, 2 Tabelas)   │
-       │      • tasks (múltiplos registros)           │
-       │      • profile (registro único)              │
-       └──────────────────────────────────────────────┘
+MÓDULO DE AUTENTICAÇÃO
+┌───────────────────────────────────────────────────────────┐
+│  ┌────────────────────────────────────────────────────┐   │
+│  │    TELAS (UI)                                      │   │
+│  │    app/login.tsx    app/register.tsx               │   │
+│  │    (Login/Google)   (Cadastro)                     │   │
+│  └────────────┬───────────────────────────────────────┘   │
+│               │ usa                                        │
+│  ┌────────────▼───────────────────────────────────────┐   │
+│  │    CONTEXTO GLOBAL (React Context API)             │   │
+│  │    src/contexts/AuthContext.tsx                    │   │
+│  │    (Provê: user, signIn, signOut, etc.)            │   │
+│  └────────────┬───────────────────────────────────────┘   │
+│               │ usa                                        │
+│  ┌────────────▼───────────────────────────────────────┐   │
+│  │    HOOK CUSTOMIZADO                                │   │
+│  │    src/hooks/useAuth.ts                            │   │
+│  │    (Lógica: onAuthStateChanged, OAuth)             │   │
+│  └────────────┬───────────────────────────────────────┘   │
+│               │ chama                                      │
+│  ┌────────────▼───────────────────────────────────────┐   │
+│  │    SERVIÇO EXTERNO                                 │   │
+│  │    src/services/firebaseConfig.ts                  │   │
+│  │    (Inicializa Firebase + Auth)                    │   │
+│  └────────────┬───────────────────────────────────────┘   │
+│               │                                            │
+└───────────────┼────────────────────────────────────────────┘
+                │
+                ▼
+          FIREBASE AUTH (nuvem)
+       ┌──────────────────────┐
+       │ Email/Senha + Google │
+       │ OAuth via browser    │
+       └──────────────────────┘
+
+
+MÓDULO DE TAREFAS              ┌───────────── MÓDULO DE PERFIL ───────────────┐
+┌──────────────────────────────┤                                              │
+│  ┌────────────────────────┐  │  ┌────────────────────────────────────────┐  │
+│  │  TELAS (UI)            │  │  │  TELA (UI)                             │  │
+│  │  app/index.tsx         │  │  │  app/profile.tsx                       │  │
+│  │  app/form.tsx          │  │  │  (Nome, email, foto)                   │  │
+│  └──────┬─────────────────┘  │  └────────────┬───────────────────────────┘  │
+│         │ usa                │               │ usa                          │
+│  ┌──────▼─────────────────┐  │  ┌────────────▼───────────────────────────┐  │
+│  │  HOOK CUSTOMIZADO      │  │  │  HOOK CUSTOMIZADO                      │  │
+│  │  src/hooks/useTasks.ts │  │  │  src/hooks/useProfile.ts               │  │
+│  └──────┬─────────────────┘  │  └────────────┬───────────────────────────┘  │
+│         │ chama              │               │ chama                        │
+│  ┌──────▼─────────────────┐  │  ┌────────────▼───────────────────────────┐  │
+│  │  REPOSITÓRIO           │  │  │  REPOSITÓRIO                           │  │
+│  │  taskRepository.ts     │  │  │  profileRepository.ts                  │  │
+│  └──────┬─────────────────┘  │  └────────────┬───────────────────────────┘  │
+└─────────┼────────────────────┘               │                              │
+          │                ┌───────────────────┼──────────────────────────────┘
+          │                │                   │
+       ┌──▼────────────────▼───────────────────▼──┐
+       │      BANCO DE DADOS (SQLite)              │
+       │      src/database/database.ts             │
+       │  (Conexão Singleton, 2 Tabelas)           │
+       │      • tasks (múltiplos registros)        │
+       │      • profile (registro único)           │
+       └───────────────────────────────────────────┘
 ```
 
-### Arquitetura em Camadas com Dois Módulos Paralelos
+### Arquitetura em Camadas com Três Módulos
 
-Esta arquitetura demonstra **separação por módulos** e **reutilização de padrões**:
+Esta arquitetura demonstra **separação por módulos** e **reutilização de padrões**, agora com a adição do módulo de autenticação:
 
 **Camadas (de cima para baixo):**
 
 - **TELAS (UI)**: capturam interações e exibem dados — NÃO contêm lógica de negócio
-- **HOOKS CUSTOMIZADOS**: gerenciam estado e orquestram operações — isolam lógica reutilizável
-- **REPOSITÓRIOS**: abstraem acesso ao SQLite — traduzem operações em SQL seguro (bind params)
-- **DATABASE**: ponto único de conexão — garante consistência com padrão Singleton
+- **CONTEXTO/HOOKS CUSTOMIZADOS**: gerenciam estado e orquestram operações — isolam lógica reutilizável
+- **REPOSITÓRIOS/SERVIÇOS**: abstraem acesso a dados (SQLite local) ou serviços externos (Firebase)
+- **DATABASE/FIREBASE**: pontos de persistência — local (SQLite) e nuvem (Firebase)
+
+**Diferenças entre os módulos:**
+
+| Aspecto                  | Autenticação                    | Tarefas/Perfil          |
+| ------------------------ | ------------------------------- | ----------------------- |
+| **Estado**               | Global (React Context)          | Local (hooks isolados)  |
+| **Fonte de dados**       | Firebase (nuvem)                | SQLite (local)          |
+| **Camada intermediária** | Service (firebaseConfig)        | Repository (SQL)        |
+| **Recarregamento**       | Automático (onAuthStateChanged) | Manual (useFocusEffect) |
+
+**Por que autenticação usa Context e tasks/profile não?**
+
+- **Autenticação**: TODAS as telas precisam saber se o usuário está logado (para proteção de rotas). Estado global faz sentido.
+- **Tasks/Profile**: apenas telas ESPECÍFICAS precisam desses dados. Hooks isolados com `useFocusEffect` funcionam perfeitamente.
 
 **Vantagens desta arquitetura:**
 
