@@ -74,10 +74,10 @@ import { AuthUser, UseAuthReturn } from '../types/auth';
  * para o login do Google. Após o usuário autorizar, o browser precisa fechar e
  * retornar ao app com o código de autorização.
  *
- * `mayInitWithUrl()` configura esse comportamento de retorno.
+ * `maybeCompleteAuthSession()` configura esse comportamento de retorno.
  * Sem esta linha, o browser ficaria aberto após o login!
  */
-WebBrowser.mayInitWithUrl();
+WebBrowser.maybeCompleteAuthSession();
 
 /**
  * Hook customizado para autenticação com Firebase.
