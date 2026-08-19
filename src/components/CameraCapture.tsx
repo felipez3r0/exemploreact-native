@@ -316,13 +316,13 @@ export function CameraCapture({ onCapture, onClose }: CameraCaptureProps) {
  * Usamos `StyleSheet.create` para estilos que não são facilmente expressos
  * com classes Tailwind, ou que precisam de valores especiais do RN.
  *
- * `StyleSheet.absoluteFillObject` é um atalho para:
+ * `StyleSheet.absoluteFill` é um atalho para:
  * { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }
  * Faz o elemento cobrir toda a tela, independente do scroll.
  */
 const styles = StyleSheet.create({
   container: {
-    ...StyleSheet.absoluteFillObject, // Cobre toda a tela
+    ...StyleSheet.absoluteFill, // Cobre toda a tela
     backgroundColor: '#000', // Fundo preto para a câmera
     justifyContent: 'center', // Centraliza conteúdo verticalmente
     alignItems: 'center', // Centraliza conteúdo horizontalmente

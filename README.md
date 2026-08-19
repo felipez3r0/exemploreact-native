@@ -12,7 +12,7 @@ Um aplicativo completo de **Lista de Tarefas** construído com React Native e Ex
 Ao estudar e reproduzir este projeto, você terá contato com:
 
 - ⚛️ **React Native** e seus componentes principais (`View`, `Text`, `FlatList`, `TextInput`, etc.)
-- 📱 **Expo SDK 55** e o ecossistema Expo
+- 📱 **Expo SDK 57** e o ecossistema Expo
 - 🗂️ **Expo Router** — roteamento baseado em arquivos (como Next.js para mobile)
 - 🗄️ **expo-sqlite** — banco de dados local com SQL no dispositivo
 - 🔐 **Firebase Authentication** — login com email/senha e Google Sign-In
@@ -58,12 +58,12 @@ Ao estudar e reproduzir este projeto, você terá contato com:
 
 Antes de começar, você precisa ter instalado:
 
-### 1. Node.js (versão 18 ou superior)
+### 1. Node.js (versão 22.13 ou superior)
 
 ```bash
 # Verifique se já está instalado:
-node --version   # deve mostrar v18.x.x ou superior
-npm --version    # deve mostrar 9.x.x ou superior
+node --version   # deve mostrar v22.13.x ou superior
+npm --version    # deve mostrar 10.x.x ou superior
 ```
 
 Se não tiver, baixe em: https://nodejs.org (instale a versão LTS)
@@ -150,20 +150,6 @@ exemploreact-native/
 
 ---
 
-├── assets/ ← Imagens, ícones, fontes
-├── global.css ← Diretivas @tailwind (NativeWind)
-├── tailwind.config.js ← Configuração do Tailwind/NativeWind
-├── babel.config.js ← Configuração do transpilador Babel
-├── metro.config.js ← Configuração do bundler Metro
-├── nativewind-env.d.ts ← Tipos TypeScript para className
-├── app.json ← Configuração do app Expo
-├── tsconfig.json ← Configuração do TypeScript
-└── package.json ← Dependências e scripts npm
-
-````
-
----
-
 ## 🚀 Passo a Passo — Criando o Projeto do Zero
 
 > Siga cada etapa na ordem. Ao final, você terá o app funcionando no seu celular!
@@ -193,7 +179,7 @@ cd meu-lista-tarefas
 
 ### ETAPA 2 — Instalar as dependências
 
-Instale os pacotes do Expo com versões compatíveis com o SDK 55:
+Instale os pacotes do Expo com versões compatíveis com o SDK 57:
 
 ```bash
 npx expo install expo-router expo-sqlite expo-linking expo-constants expo-status-bar \
@@ -1295,7 +1281,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { auth } from '../services/firebaseConfig';
 import { AuthUser, UseAuthReturn } from '../types/auth';
 
-WebBrowser.mayInitWithUrl();
+WebBrowser.maybeCompleteAuthSession();
 
 export function useAuth(): UseAuthReturn {
   const [user, setUser] = useState<AuthUser | null>(null);
@@ -2191,7 +2177,7 @@ const cameraRef = useRef<CameraView>(null);
 O `expo-file-system` fornece APIs orientadas a objetos para ler, escrever, copiar e deletar arquivos no sistema de arquivos do dispositivo.
 
 > **Expo SDK 55 — Nova API (`File` e `Paths`)**  
-> A partir do SDK 55 o `expo-file-system` expõe uma API baseada em classes. Importe `File` e `Paths` em vez do namespace legado `FileSystem.*`.
+> A partir do SDK 55 o `expo-file-system` expõe uma API baseada em classes. Importe `File` e `Paths` em vez do namespace legado `FileSystem.*` — essa continua sendo a API recomendada no SDK 57.
 
 **Import:**
 
